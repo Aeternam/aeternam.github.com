@@ -95,7 +95,7 @@ task :new_post, :title do |t, args|
   mkdir_p "#{source_dir}/#{posts_dir}"
   args.with_defaults(:title => 'new-post')
   title = args.title
-  filename = "#{source_dir}/#{posts_dir}/#{Time.now.strftime('%Y-%m-%d')}-#{title.to_url}.#{new_post_ext}"
+  filename = "#{source_dir}/#{posts_dir}/#{Tim.now.strftime('%Y-%m-%d')}-#{title.to_url}.#{new_post_ext}"
   if File.exist?(filename)
     abort("rake aborted!") if ask("#{filename} already exists. Do you want to overwrite?", ['y', 'n']) == 'n'
   end
