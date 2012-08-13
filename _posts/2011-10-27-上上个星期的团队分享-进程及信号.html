@@ -1,0 +1,196 @@
+---           
+layout: post
+title: 上上个星期的团队分享-进程及信号
+date: 2011-10-27 12:22:00 UTC
+comments: false
+categories: 分享 系统编程
+---
+
+<div id="__ss_9904973" style="width: 425px;">
+<strong style="display: block; margin: 12px 0 4px;"><a href="http://www.slideshare.net/smilejustforfan/process-signal" title="Process Signal">Process Signal</a></strong><br />
+<div style="text-align: center;">
+<object height="355" id="__sse9904973" width="425"><param name="movie" value="http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=signal-111027071046-phpapp02&stripped_title=process-signal&userName=smilejustforfan" />
+
+<param name="allowFullScreen" value="true"/>
+
+<param name="allowScriptAccess" value="always"/>
+
+<embed name="__sse9904973" src="http://static.slidesharecdn.com/swf/ssplayer2.swf?doc=signal-111027071046-phpapp02&stripped_title=process-signal&userName=smilejustforfan" type="application/x-shockwave-flash" allowscriptaccess="always" allowfullscreen="true" width="425" height="355"></embed></object></div>
+<br />
+<div style="padding: 5px 0 12px;">
+View more <a href="http://www.slideshare.net/">presentations</a> from <a href="http://www.slideshare.net/smilejustforfan">smilejustforfan</a>.</div>
+</div>
+其中用到的代码：<br />
+1.fork()初步了解
+<br />
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span><span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    fork<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    fork<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">hello!</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+2.fork()会返回两次，对父子进程各一次
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">sys/types.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdlib.h</span><span style="color: #02d045;">&gt;</span>
+
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span><span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">void</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+
+    pid_t pid<span style="color: #b060b0;">;</span>
+    <span style="color: #e66170; font-weight: bold;">char</span> <span style="color: #d2cd86;">*</span>message<span style="color: #b060b0;">;</span>
+    <span style="color: #e66170; font-weight: bold;">int</span> n<span style="color: #b060b0;">;</span>
+    pid <span style="color: #d2cd86;">=</span> fork<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>pid <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">perror</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">fork failed.</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">exit</span><span style="color: #d2cd86;">(</span><span style="color: #008c00;">1</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>    
+    <span style="color: #b060b0;">}</span>
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>pid <span style="color: #d2cd86;">=</span><span style="color: #d2cd86;">=</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+        message <span style="color: #d2cd86;">=</span> <span style="color: #02d045;">"</span><span style="color: #00c4c4;">This is the child.</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #b060b0;">;</span>
+        n <span style="color: #d2cd86;">=</span> <span style="color: #008c00;">6</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+    <span style="color: #e66170; font-weight: bold;">else</span>
+    <span style="color: #b060b0;">{</span>
+        message <span style="color: #d2cd86;">=</span> <span style="color: #02d045;">"</span><span style="color: #00c4c4;">This is the parent.</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #b060b0;">;</span>
+        n <span style="color: #d2cd86;">=</span> <span style="color: #008c00;">3</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+    <span style="color: #e66170; font-weight: bold;">for</span><span style="color: #d2cd86;">(</span><span style="color: #b060b0;">;</span>n <span style="color: #d2cd86;">&gt;</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>n<span style="color: #d2cd86;">-</span><span style="color: #d2cd86;">-</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">id:</span><span style="color: teal;">%d</span><span style="color: #00c4c4;">  </span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">,</span>getpid<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span>message<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        sleep<span style="color: #d2cd86;">(</span><span style="color: #008c00;">1</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+
+
+    <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+3.僵尸进程
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdlib.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">sys/types.h</span><span style="color: #02d045;">&gt;</span>
+
+<span style="color: #008073;">#</span><span style="color: #008073;">ifdef</span><span style="color: #008073;"> UNIX</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">define</span><span style="color: #008073;"> PS </span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">ps -a -O pid,ppid,s,tty,comm</span><span style="color: #02d045;">"</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">else</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">define</span><span style="color: #008073;"> PS </span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">ps axf</span><span style="color: #02d045;">"</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">endif</span>
+
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span><span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">void</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+  pid_t pid<span style="color: #b060b0;">;</span>
+  <span style="color: #e66170; font-weight: bold;">if</span><span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">(</span>pid <span style="color: #d2cd86;">=</span> fork<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span> <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+      <span style="color: #e66170; font-weight: bold;">perror</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">fork error</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+      <span style="color: #e66170; font-weight: bold;">exit</span><span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">-</span><span style="color: #008c00;">1</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+
+  <span style="color: #e66170; font-weight: bold;">else</span> <span style="color: #e66170; font-weight: bold;">if</span><span style="color: #d2cd86;">(</span>pid <span style="color: #d2cd86;">=</span><span style="color: #d2cd86;">=</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #e66170; font-weight: bold;">exit</span><span style="color: #d2cd86;">(</span><span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+  <span style="color: #e66170; font-weight: bold;">else</span>
+    sleep<span style="color: #d2cd86;">(</span><span style="color: #008c00;">6</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+<span style="color: #e66170; font-weight: bold;">system</span><span style="color: #d2cd86;">(</span>PS<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+<span style="color: #e66170; font-weight: bold;">exit</span><span style="color: #d2cd86;">(</span><span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+4.signal()的简单示例
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">signal.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+
+
+<span style="color: #e66170; font-weight: bold;">void</span> sig_handler<span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> sig<span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+  <span style="color: #e66170; font-weight: bold;">switch</span><span style="color: #d2cd86;">(</span>sig<span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">case </span><span style="color: #007d45;">SIGHUP</span><span style="color: #e34adc;">:</span>
+            <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Catch the signal SIGHUP!</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+            <span style="color: #e66170; font-weight: bold;">break</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">case </span><span style="color: #007d45;">SIGINT</span><span style="color: #e34adc;">:</span>
+            <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Catch the signal SIGINT!</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+            <span style="color: #e66170; font-weight: bold;">break</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+<span style="color: #b060b0;">}</span>
+
+
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span><span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+  <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">PID is:</span><span style="color: teal;">%d</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">,</span>getpid<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+  <span style="color: #e66170; font-weight: bold;">signal</span><span style="color: #d2cd86;">(</span>SIGHUP<span style="color: #d2cd86;">,</span>sig_handler<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+ 
+  <span style="color: #e66170; font-weight: bold;">signal</span><span style="color: #d2cd86;">(</span>SIGINT<span style="color: #d2cd86;">,</span>sig_handler<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+  sleep<span style="color: #d2cd86;">(</span><span style="color: #008c00;">400</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+  <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+5.sigaction()的简单示例
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">signal.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+
+<span style="color: #e66170; font-weight: bold;">void</span> sig_handler<span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span><span style="color: #d2cd86;">,</span>siginfo_t<span style="color: #d2cd86;">*</span><span style="color: #d2cd86;">,</span><span style="color: #e66170; font-weight: bold;">void</span><span style="color: #d2cd86;">*</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span><span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> argc<span style="color: #d2cd86;">,</span><span style="color: #e66170; font-weight: bold;">char</span> <span style="color: #d2cd86;">*</span><span style="color: #d2cd86;">*</span>argv<span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+  <span style="color: #e66170; font-weight: bold;">struct</span> sigaction act<span style="color: #b060b0;">;</span>
+  sigset_t newmask<span style="color: #d2cd86;">,</span>oldmask<span style="color: #b060b0;">;</span>
+  <span style="color: #e66170; font-weight: bold;">int</span> rc<span style="color: #b060b0;">;</span>
+  
+  sigemptyset<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>newmask<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+  sigaddset<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>newmask<span style="color: #d2cd86;">,</span>SIGINT<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+  sigaddset<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>newmask<span style="color: #d2cd86;">,</span>SIGRTMIN<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+  sigprocmask<span style="color: #d2cd86;">(</span>SIG_BLOCK<span style="color: #d2cd86;">,</span><span style="color: #d2cd86;">&amp;</span>newmask<span style="color: #d2cd86;">,</span><span style="color: #d2cd86;">&amp;</span>oldmask<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+
+  act<span style="color: #d2cd86;">.</span>sa_sigaction <span style="color: #d2cd86;">=</span> sig_handler<span style="color: #b060b0;">;</span>
+  act<span style="color: #d2cd86;">.</span>sa_flags <span style="color: #d2cd86;">=</span> SA_SIGINFO<span style="color: #b060b0;">;</span>
+
+  <span style="color: #e66170; font-weight: bold;">if</span><span style="color: #d2cd86;">(</span>sigaction<span style="color: #d2cd86;">(</span>SIGINT<span style="color: #d2cd86;">,</span><span style="color: #d2cd86;">&amp;</span>act<span style="color: #d2cd86;">,</span><span style="color: #007d45;">NULL</span><span style="color: #d2cd86;">)</span> <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+      <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">install signal error</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+  <span style="color: #e66170; font-weight: bold;">if</span><span style="color: #d2cd86;">(</span>sigaction<span style="color: #d2cd86;">(</span>SIGRTMIN<span style="color: #d2cd86;">,</span><span style="color: #d2cd86;">&amp;</span>act<span style="color: #d2cd86;">,</span><span style="color: #007d45;">NULL</span><span style="color: #d2cd86;">)</span> <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span>
+    <span style="color: #b060b0;">{</span>
+      <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">install signal error</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+  <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">pid = </span><span style="color: teal;">%d</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">,</span>getpid<span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+  sleep<span style="color: #d2cd86;">(</span><span style="color: #008c00;">20</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+  sigprocmask<span style="color: #d2cd86;">(</span>SIG_SETMASK<span style="color: #d2cd86;">,</span><span style="color: #d2cd86;">&amp;</span>oldmask<span style="color: #d2cd86;">,</span><span style="color: #007d45;">NULL</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+  <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+
+<span style="color: #e66170; font-weight: bold;">void</span> sig_handler<span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> signum<span style="color: #d2cd86;">,</span>siginfo_t <span style="color: #d2cd86;">*</span>info<span style="color: #d2cd86;">,</span><span style="color: #e66170; font-weight: bold;">void</span> <span style="color: #d2cd86;">*</span>myact<span style="color: #d2cd86;">)</span>
+     <span style="color: #b060b0;">{</span>
+       <span style="color: #e66170; font-weight: bold;">if</span><span style="color: #d2cd86;">(</span>signum <span style="color: #d2cd86;">=</span><span style="color: #d2cd86;">=</span> SIGINT<span style="color: #d2cd86;">)</span>
+          <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Got a common signal</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+       <span style="color: #e66170; font-weight: bold;">else</span>
+          <span style="color: #e66170; font-weight: bold;">printf</span><span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Got a real time signal</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+     <span style="color: #b060b0;">}</span>
+</pre>
+<br /><div class="blogger-post-footer"><img width='1' height='1' src='https://blogger.googleusercontent.com/tracker/6372431252755588535-655168100215426637?l=smilejustforfan.blogspot.com' alt='' /></div>
+<p><a href="http://feedads.g.doubleclick.net/~a/5_dSrXdCrlfou8pVOBZ75CABqVQ/0/da"><img src="http://feedads.g.doubleclick.net/~a/5_dSrXdCrlfou8pVOBZ75CABqVQ/0/di" border="0" ismap="true"></img></a><br/>
+<a href="http://feedads.g.doubleclick.net/~a/5_dSrXdCrlfou8pVOBZ75CABqVQ/1/da"><img src="http://feedads.g.doubleclick.net/~a/5_dSrXdCrlfou8pVOBZ75CABqVQ/1/di" border="0" ismap="true"></img></a></p><img src="http://feeds.feedburner.com/~r/RobbyLeesBolgsmilejustforfan/~4/DCEFOrsToJE" height="1" width="1"/>

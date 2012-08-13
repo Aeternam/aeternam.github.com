@@ -1,0 +1,288 @@
+---           
+layout: post
+title: {译文}关于Linux信号的一些（三）-- 什么是signaled，什么是signal handler
+date: 2011-10-11 07:45:00 UTC
+comments: false
+categories: 系统编程 翻译
+---
+
+<br />
+译自<a href="http://www.linuxprogrammingblog.com/all-about-linux-signals">http://www.linuxprogrammingblog.com/all-about-linux-signals</a><br />
+<br />
+<br />
+进程会在这几种情况下接收到信号：<br />
+<br />
+<ul>
+<li>当用户在用户空间或者其他的一些进程调用函数比如像 <a href="http://www.kernel.org/doc/man-pages/online/pages/man2/kill.2.html">kill(2)</a>&nbsp;。</li>
+<li>当进程利用abort(3)给自己发送信号。</li>
+<li>当一个子进程要退出的时候，操作系统发送信号SIGCHLD。</li>
+<li>当终端检测到父进程死亡或者挂起这一事件，会发送信号SIGHUP。</li>
+<li>当用户通过键盘中断程序，会发送信号SIGINT。</li>
+<li>当程序运行异常，信号SIGILL，SIGFPE，SIGSEGV当中会有一个被发送。</li>
+<li>当一个程序存取的内存是被 mmap(2) 映射但目前不可用（比如说文件被其他进程删节的时候）-- 真正令人恶心的情况是当用 mmap() 去读取文件的时候。现在还没有好的方法去处理这种情况。</li>
+<li>当一个分析器比如gprof在被使用的时候，程序偶尔会收到信号SIGPROF。这有时是有问题的，比如当你忘记去适当地去处理被中断的系统函数像 read(2) (errno == EINTR)。</li>
+<li>当你使用 write(2) 或者其他类似的传送数据的函数而且没有人去接受这个数据，信号SIGPIPE就会被发出。这种情况是非常常见的而且你必须记住那些函数不会只因为错误而退出，并且设置了errno变量，但也会引发信号SIGPIPE被传递到这个程序。举个例子，当你写入数据到标准输出并用管道符将你的输出重定向到另外一个程序。如果这个程序退出而你正试图去向它传送数据，信号SIGPIPE就会被发送到你的进程。信号还会被用于返回值为错误的正常函数，因为这个事件是异步的，所以你无法确切的辨别多大的数据已经被成功的传送。这种情况也通常会在你在给一个socket发送的数据的时候发生。这是因为数据是有缓冲 和/或 以线性的发送的，所以没有马上被发送到目标，而且操作系统可以实现在发送信号的函数退出不发送信号。</li>
+</ul>
+想要查看完整的signal信息，请参阅 signal(7) man手册。<br />
+<div>
+<br /></div>
+<div>
+<span class="Apple-style-span" style="font-size: x-large;">Signal handlers</span></div>
+<div>
+<span class="Apple-style-span" style="font-size: large;">传统的signal()已经被弃用</span></div>
+<div>
+<span class="Apple-style-span" style="font-size: large;"><br /></span></div>
+<div>
+signal(2)函数是最古老的也是最简单的注册signal handler的方式，但它已经被弃用了。被弃用的原因很少，不过最重要的一点，这种传统的UNIX的实现方式会在信号接收完毕之后把signal handler重置成它的默认值。如果你需要分别地处理每一个传递到你的程序的信号比如处理信号SIGCHLD去找到一个将要死去的进程，这是有竞争的。要这么做的话，你将会让signal handler对自己重新设置一遍，而另外一个信号可能在你调用函数 signal(2) 之前就已经到达该进程了。这种现象会因平台的不同而不同。此外，signal函数缺少一些在 sigaction(2) 中你将来可能会用到的特性。</div>
+<div>
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+<span class="Apple-style-span" style="font-size: large;">设置信号动作的推荐方法：sigaction</span><br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+函数 sigaction(2) 是一个更好的处理信号动作的方法。它的函数原型：</div>
+<div>
+<div>
+<div>
+<span class="Apple-style-span" style="background-color: black; color: #d1d1d1; font-family: monospace; white-space: pre;"><span style="color: #e66170; font-weight: bold;">int</span> sigaction <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> signum<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">const</span> <span style="color: #e66170; font-weight: bold;">struct</span> sigaction <span style="color: #d2cd86;">*</span>act<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">struct</span> sigaction <span style="color: #d2cd86;">*</span>oldact<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span></span></div>
+</div>
+</div>
+正如你所看到的，你没直接向signal handler传递指针，而是一个叫做sigaction的struct的对象。这个struct的定义如下：<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #e66170; font-weight: bold;">struct</span> sigaction <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">void</span>     <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">*</span>sa_handler<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">void</span>     <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">*</span>sa_sigaction<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span><span style="color: #d2cd86;">,</span> siginfo_t <span style="color: #d2cd86;">*</span><span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">void</span> <span style="color: #d2cd86;">*</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        sigset_t   sa_mask<span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">int</span>        sa_flags<span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">void</span>     <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">*</span>sa_restorer<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">void</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span><span style="color: #b060b0;">;</span>
+</pre>
+更多关于这个struct字段的描述请参阅 sigaction(2) man手册。最重要的几个字段：<br />
+<br />
+<ul>
+<li>sa_handler - 这是一个指向你的处理函数的指针，它有跟 signal(2) 的handler一样的函数原型。</li>
+<li>sa_sigaction - 这是两个运行signal handler方法的其中一个。它含有除signal number之外的两个参数，其中<span class="Apple-style-span" style="font-family: Georgia, 'Times New Roman', serif;"><span class="Apple-style-span" style="color: blue;">siginfo_t</span> <span class="Apple-style-span" style="color: #38761d;">*</span></span> 是非常有趣的。它提供了更多的关于接收到的信号的信息，我在后面会详细介绍。</li>
+<li>sa_mask - 让你准确地设置在handler执行时阻塞的信号。此外，如果你不用SA_NODEFER标志的话，那个被触发的信号将会被阻塞。</li>
+<li>sa_flags - 让你修改处理进程的信号的行为。关于这个字段的详细信息，请参阅man手册。要使用sa_sigaction的话你一定会用到SA_SIGINFO标志。</li>
+</ul>
+假如你不会用到任何一个sigaction的额外特性，signal(2) 和 sigaction(2)还有什么不同之处呢？答案是：可移植性和没有竞争状况（译者注：原文为no race conditions）。这种在signal handler被调用后会被重置的问题不会影响到 sigaction(2) ，因为默认的行为不会去重置handler，也不会在它执行的时候去阻塞信号。所以没有进程间没有竞争，而且它的行为在POSIX中有详细记录。另外一个不同，使用 signal(2) 的话有些系统调用会重新启动，但使用 sigaction(2) 的话则不会。<br />
+<div>
+<br /></div>
+<div>
+<span class="Apple-style-span" style="font-size: large;">举例说明sigaction()的使用</span></div>
+<div>
+<span class="Apple-style-span" style="font-size: large;"><br /></span></div>
+<div>
+看 <a href="http://www.linuxprogrammingblog.com/code-examples/sigaction">使用sigaction()的例子</a>&nbsp;（见下），然后使用一些其他的参数设置一个signal handler。</div>
+<div>
+<br /></div>
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #9999a9;">/* Example of using sigaction() to setup a signal handler with 3 arguments</span>
+<span style="color: #9999a9;">&nbsp;* including siginfo_t.</span>
+<span style="color: #9999a9;">&nbsp;*/</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">signal.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">string.h</span><span style="color: #02d045;">&gt;</span>
+ 
+<span style="color: #e66170; font-weight: bold;">static</span> <span style="color: #e66170; font-weight: bold;">void</span> hdl <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> sig<span style="color: #d2cd86;">,</span> siginfo_t <span style="color: #d2cd86;">*</span>siginfo<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">void</span> <span style="color: #d2cd86;">*</span>context<span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    <span style="color: #e66170; font-weight: bold;">printf</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Sending PID: </span><span style="color: teal;">%ld</span><span style="color: #00c4c4;">, UID: </span><span style="color: teal;">%ld</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">,</span>
+            <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">long</span><span style="color: #d2cd86;">)</span>siginfo<span style="color: #d2cd86;">-</span><span style="color: #d2cd86;">&gt;</span>si_pid<span style="color: #d2cd86;">,</span> <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">long</span><span style="color: #d2cd86;">)</span>siginfo<span style="color: #d2cd86;">-</span><span style="color: #d2cd86;">&gt;</span>si_uid<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+ 
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span> <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> argc<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">char</span> <span style="color: #d2cd86;">*</span>argv<span style="color: #d2cd86;">[</span><span style="color: #d2cd86;">]</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    <span style="color: #e66170; font-weight: bold;">struct</span> sigaction act<span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">memset</span> <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>act<span style="color: #d2cd86;">,</span> <span style="color: #00c4c4;">'\0'</span><span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">sizeof</span><span style="color: #d2cd86;">(</span>act<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #9999a9;">/* Use the sa_sigaction field because the handles has two additional parameters */</span>
+    act<span style="color: #d2cd86;">.</span>sa_sigaction <span style="color: #d2cd86;">=</span> <span style="color: #d2cd86;">&amp;</span>hdl<span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #9999a9;">/* The SA_SIGINFO flag tells sigaction() to use the sa_sigaction field, not sa_handler. */</span>
+    act<span style="color: #d2cd86;">.</span>sa_flags <span style="color: #d2cd86;">=</span> SA_SIGINFO<span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>sigaction<span style="color: #d2cd86;">(</span>SIGTERM<span style="color: #d2cd86;">,</span> <span style="color: #d2cd86;">&amp;</span>act<span style="color: #d2cd86;">,</span> <span style="color: #007d45;">NULL</span><span style="color: #d2cd86;">)</span> <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">perror</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">sigaction</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">while</span> <span style="color: #d2cd86;">(</span><span style="color: #008c00;">1</span><span style="color: #d2cd86;">)</span>
+        sleep <span style="color: #d2cd86;">(</span><span style="color: #008c00;">10</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+在这个例子中，我们使用了在用SIGTERM情况下的三种参数。如果我们不设置SA_SIGINFO标志的话，我们将会用到一个比较传统版本的参数，并利用sa_handler字段的设置把这个指针传给它。对于 signal(2) 来说那将是个替换。你可以尝试去运行它并用 kill PID 来看会发生什么。<br />
+<br />
+在signal handler中，我们会从 siginfo_t *中读取两个字段去查看发送者的PID和UID。这个struct有更多的字段，我稍后会具体介绍它。<br />
+<br />
+函数 sleep(3) 在一个循环中被使用，是因为当信号到达的时候它会被中止，需要再次被调用。<br />
+<br />
+<span class="Apple-style-span" style="font-size: large;">SA_SIGINFO handler</span><br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+在以前的例子中，SA_SIGINFO 被用来作为一个参数向signal handler传递更多的信息。我们看到结构体siginfo_t中含有si_pid和si_uid两个字段（发送信号的进程的PID和UID），但还有更多。它们所有都在 sigaction(2) man手册中有说明。在Linux中，只有 si_signo(signal number)和si_code(signal code)对于所有的信号都是有效的。其他字段的存在由信号的类型决定。一些其他的字段：<br />
+<br />
+<ul>
+<li>si_code - 信号被发送的原因。如果信号由 kill(2) 或者 raise(3) 发送，它的值或许是SI_USER；如果是内核发送的则值是SI_KERNEL或者别的。对于一些信号so_code有些特殊的值，比如ILL_ILLADR会告诉你SIGILL是由于非法的寻址方式而发送的。</li>
+<li>对于信号SIGCHLD，字段si_status,si_utime,si_stime会被填充，并且包含退出状态的信息，或者死亡进程的信号，用户和消耗的系统时间。</li>
+<li>如果是SIGILL，SIGFPE，SIGSEGV，SIGBUS，si_addr会包含导致出错的内存地址。</li>
+</ul>
+我们会在后面看到更多关于使用 siginfo_t 的例子。<br />
+<br />
+<span class="Apple-style-span" style="font-size: large;">编译器优化和signal handler中的数据</span><br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+让我们来看下面的例子：<br />
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">signal.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">string.h</span><span style="color: #02d045;">&gt;</span>
+ 
+<span style="color: #e66170; font-weight: bold;">static</span> <span style="color: #e66170; font-weight: bold;">int</span> exit_flag <span style="color: #d2cd86;">=</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+ 
+<span style="color: #e66170; font-weight: bold;">static</span> <span style="color: #e66170; font-weight: bold;">void</span> hdl <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> sig<span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    exit_flag <span style="color: #d2cd86;">=</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+ 
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span> <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> argc<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">char</span> <span style="color: #d2cd86;">*</span>argv<span style="color: #d2cd86;">[</span><span style="color: #d2cd86;">]</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    <span style="color: #e66170; font-weight: bold;">struct</span> sigaction act<span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">memset</span> <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>act<span style="color: #d2cd86;">,</span> <span style="color: #00c4c4;">'\0'</span><span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">sizeof</span><span style="color: #d2cd86;">(</span>act<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    act<span style="color: #d2cd86;">.</span>sa_handler <span style="color: #d2cd86;">=</span> <span style="color: #d2cd86;">&amp;</span>hdl<span style="color: #b060b0;">;</span>
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>sigaction<span style="color: #d2cd86;">(</span>SIGTERM<span style="color: #d2cd86;">,</span> <span style="color: #d2cd86;">&amp;</span>act<span style="color: #d2cd86;">,</span> <span style="color: #007d45;">NULL</span><span style="color: #d2cd86;">)</span> <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">perror</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">sigaction</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">while</span> <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">!</span>exit_flag<span style="color: #d2cd86;">)</span>
+        <span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+这段程序干了什么？这取决于编译器优化的设置。没有优化的话，它会执行个循环直到进程接收到SIGTERM或者其他终断进程的信号而且不是一个handler。当你编译它的时候使用gcc的 -O3的参数，它在接收信号SIGTERM后不会退出。为什么？因为 while循环通过这种方式被优化--变量exit_flags被载入到处理器注册一次但在循环中不会读取内存。编译器不知道循环不是程序在执行这个循环存取这个变量的唯一的区域。在这些情况下--在一个也可以被其他程序存取的signal handler中修改一个变量，你必须记的去指示编译器当读或写的时候总是存取这些在内存中的变量。你应该在声明变量的时候使用关键字 <span class="Apple-style-span" style="color: #990000;">volatile</span>&nbsp;：<br />
+<span class="Apple-style-span" style="background-color: black; color: #d1d1d1; font-family: monospace; white-space: pre;"><span style="color: #e66170; font-weight: bold;">static</span> <span style="color: #e66170; font-weight: bold;">volatile</span> <span style="color: #e66170; font-weight: bold;">int</span> exit_flag <span style="color: #d2cd86;">=</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span></span><br />
+做了这样的更改之后，一切都按照预期的运行了。<br />
+<br />
+<span class="Apple-style-span" style="font-size: large;">原子类型</span><br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+有一种数据类型被定义成在signal handler和代码中去确保被自动读和写：sig_atomic_t。这种类型的大小(size)没有被定义，但它是整形。理论上说，这是唯一的当它同样被signal handler存取的时候你可以安全的分配并读取的类型。记住这些：<br />
+<br />
+<ul>
+<li>它不会像互斥量一样工作：它是被确保读或写这种类型转化成一个不能被中断的操作，代码如下：</li>
+</ul>
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #e66170; font-weight: bold;">sig_atomic_t</span> i <span style="color: #d2cd86;">=</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+ 
+<span style="color: #e66170; font-weight: bold;">void</span> sig_handler <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> sig<span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>i<span style="color: #d2cd86;">+</span><span style="color: #d2cd86;">+</span> <span style="color: #d2cd86;">=</span><span style="color: #d2cd86;">=</span> <span style="color: #008c00;">5</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+        <span style="color: #9999a9;">// ...</span>
+    <span style="color: #b060b0;">}</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+这样是不安全的：在if语句中存在读和写(update)，但只有单独的读和单独的写是原子类型的。<br />
+<br />
+<ul>
+<li>不要试图去使用这个类型在一个多线程的程序中作为一个可以被不借助于互斥量而使用的类型。它只是为signal handler所用而且和互斥量无关！</li>
+<li>你不用担心在signal handler中数据是否被修改或者被读取，如果它发生了，只会在信号被阻塞的时候。后面我介绍如何去阻塞信号。但你将仍需要 <span class="Apple-style-span" style="color: #990000;">volatile</span> 关键字。</li>
+</ul>
+<br />
+<br />
+<span class="Apple-style-span" style="font-size: large;">信号安全的(signal-safe) 函数</span><br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+你不能在signal handler中干所有的事情。请记住，你的程序被中断，而你不知道正在被修改中的数据对象。它可能不是你的代码，而是你正在使用的一个库或者c的标准库。事实上，有一个很短的函数清单，你可以在 signal(7) 中安全地调用signal handler。例如，你可以用 open(2) 打开一个文件，用 unlink(2) 删除一个文件，调用_exit(2) （不是 exit(3)!）等等。在实践中，这份清单是有限的，你能做的只是设置一些全局标志以通知在做像退出之类事情的进程。另一方面 wait(2) 和 waitpid(2) 函数可以使用，所以你可以通过SIGCHLD对死亡进程做清理，unlink(2) 是可用的，这样你可以删除一个pid文件等等。<br />
+<br />
+<span class="Apple-style-span" style="font-size: large;">处理信号的另一种方法: signalfd()</span><br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><br />
+signalfd(2) 是一种非常符合linux特性的系统调用，在2.6.22版本的内核中都有它，signalfd(2)允许通过文件描述符(file descriptor)来接受信号。这种方法实现了不用handler函数就能以同步的方式处理信号。让我们来看一个如何使用signalfd()的例子：<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #9999a9;">/* Example of use of a Linux-specific call - signalfd() to handle signals using</span>
+<span style="color: #9999a9;">&nbsp;* a file descriptor.</span>
+<span style="color: #9999a9;">&nbsp;*/</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">stdio.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">unistd.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">signal.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">sys/signalfd.h</span><span style="color: #02d045;">&gt;</span>
+<span style="color: #008073;">#</span><span style="color: #008073;">include </span><span style="color: #02d045;">&lt;</span><span style="color: #40015a;">string.h</span><span style="color: #02d045;">&gt;</span>
+ 
+<span style="color: #e66170; font-weight: bold;">int</span> <span style="color: #e66170; font-weight: bold;">main</span> <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">int</span> argc<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">char</span> <span style="color: #d2cd86;">*</span>argv<span style="color: #d2cd86;">[</span><span style="color: #d2cd86;">]</span><span style="color: #d2cd86;">)</span>
+<span style="color: #b060b0;">{</span>
+    <span style="color: #e66170; font-weight: bold;">int</span> sfd<span style="color: #b060b0;">;</span>
+    sigset_t mask<span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #9999a9;">/* We will handle SIGTERM and SIGINT. */</span>
+    sigemptyset <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>mask<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    sigaddset <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>mask<span style="color: #d2cd86;">,</span> SIGTERM<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    sigaddset <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">&amp;</span>mask<span style="color: #d2cd86;">,</span> SIGINT<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #9999a9;">/* Block the signals thet we handle using signalfd(), so they don't</span>
+<span style="color: #9999a9;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;* cause signal handlers or default signal actions to execute. */</span>
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>sigprocmask<span style="color: #d2cd86;">(</span>SIG_BLOCK<span style="color: #d2cd86;">,</span> <span style="color: #d2cd86;">&amp;</span>mask<span style="color: #d2cd86;">,</span> <span style="color: #007d45;">NULL</span><span style="color: #d2cd86;">)</span> <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">perror</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">sigprocmask</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+ 
+    <span style="color: #9999a9;">/* Create a file descriptor from which we will read the signals. */</span>
+    sfd <span style="color: #d2cd86;">=</span> signalfd <span style="color: #d2cd86;">(</span><span style="color: #d2cd86;">-</span><span style="color: #008c00;">1</span><span style="color: #d2cd86;">,</span> <span style="color: #d2cd86;">&amp;</span>mask<span style="color: #d2cd86;">,</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+    <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>sfd <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+        <span style="color: #e66170; font-weight: bold;">perror</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">signalfd</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+    <span style="color: #b060b0;">}</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">while</span> <span style="color: #d2cd86;">(</span><span style="color: #008c00;">1</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+ 
+        <span style="color: #90b0e0;">/** The buffor for read(), this structure contains information</span>
+<span style="color: #90b0e0;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;* about the signal we've read. */</span>
+        <span style="color: #e66170; font-weight: bold;">struct</span> signalfd_siginfo si<span style="color: #b060b0;">;</span>
+ 
+        ssize_t res<span style="color: #b060b0;">;</span>
+ 
+        res <span style="color: #d2cd86;">=</span> read <span style="color: #d2cd86;">(</span>sfd<span style="color: #d2cd86;">,</span> <span style="color: #d2cd86;">&amp;</span>si<span style="color: #d2cd86;">,</span> <span style="color: #e66170; font-weight: bold;">sizeof</span><span style="color: #d2cd86;">(</span>si<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+ 
+        <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>res <span style="color: #d2cd86;">&lt;</span> <span style="color: #008c00;">0</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+            <span style="color: #e66170; font-weight: bold;">perror</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">read</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+            <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+        <span style="color: #b060b0;">}</span>
+        <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>res <span style="color: #d2cd86;">!</span><span style="color: #d2cd86;">=</span> <span style="color: #e66170; font-weight: bold;">sizeof</span><span style="color: #d2cd86;">(</span>si<span style="color: #d2cd86;">)</span><span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+            <span style="color: #e66170; font-weight: bold;">fprintf</span> <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">stderr</span><span style="color: #d2cd86;">,</span> <span style="color: #02d045;">"</span><span style="color: #00c4c4;">Something wrong</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+            <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+        <span style="color: #b060b0;">}</span>
+ 
+        <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>si<span style="color: #d2cd86;">.</span>ssi_signo <span style="color: #d2cd86;">=</span><span style="color: #d2cd86;">=</span> SIGTERM<span style="color: #d2cd86;">)</span>
+            <span style="color: #e66170; font-weight: bold;">printf</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Got SIGTERM</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+        <span style="color: #e66170; font-weight: bold;">else</span> <span style="color: #e66170; font-weight: bold;">if</span> <span style="color: #d2cd86;">(</span>si<span style="color: #d2cd86;">.</span>ssi_signo <span style="color: #d2cd86;">=</span><span style="color: #d2cd86;">=</span> SIGINT<span style="color: #d2cd86;">)</span> <span style="color: #b060b0;">{</span>
+ 
+ 
+            <span style="color: #e66170; font-weight: bold;">printf</span> <span style="color: #d2cd86;">(</span><span style="color: #02d045;">"</span><span style="color: #00c4c4;">Bye!</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+            <span style="color: #e66170; font-weight: bold;">break</span><span style="color: #b060b0;">;</span>
+        <span style="color: #b060b0;">}</span>
+        <span style="color: #e66170; font-weight: bold;">else</span> <span style="color: #b060b0;">{</span>
+            <span style="color: #e66170; font-weight: bold;">fprintf</span> <span style="color: #d2cd86;">(</span><span style="color: #e66170; font-weight: bold;">stderr</span><span style="color: #d2cd86;">,</span> <span style="color: #02d045;">"</span><span style="color: #00c4c4;">Got some unhandled signal</span><span style="color: teal;">\n</span><span style="color: #02d045;">"</span><span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+            <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">1</span><span style="color: #b060b0;">;</span>
+        <span style="color: #b060b0;">}</span>
+    <span style="color: #b060b0;">}</span>
+ 
+    <span style="color: #9999a9;">/* Close the file descriptor if we no longer need it. */</span>
+    close <span style="color: #d2cd86;">(</span>sfd<span style="color: #d2cd86;">)</span><span style="color: #b060b0;">;</span>
+ 
+    <span style="color: #e66170; font-weight: bold;">return</span> <span style="color: #008c00;">0</span><span style="color: #b060b0;">;</span>
+<span style="color: #b060b0;">}</span>
+</pre>
+<br />
+首先，我们要使用sigprocmask(2)来阻塞我们想要用signalfd(2)处理的信号。sigprocmask(2)这个函数会在后面讲解。然后我们调用signalfd(2)去创建一个用来读取传递进来的信号的文件描述符。这时候假如SIGTERM或者SIGINT传递进来，进程也不会因此而被中断，不会去调用任何handler。这个信号会被排队，而且你能通过描述符 sfd 看到它的信息。你必须提供一个足够大的buffer，让它能够读取 struct signalfd_siginfo，struct signalfd_siginfo中存放的信息和我们之前讨论过的 siginfo_t 相似。不同之处在于，字段的名称可能会有所不同(比如ssi_signo代替了si_signo)。有趣的是，sfd描述符的自身的行为和使用，都可以像其他任何一个文件描述符一样，特别的，你可以这样：<br />
+<br />
+<ul>
+<li>可以在select(2),poll(2)等类似的函数中使用。</li>
+<li>可以让它不能被阻塞。</li>
+<li>可以创建多个sfd，每个sfd处理不同的信号并返回不同的描述符，多个不同的描述符为select(2)所用。</li>
+<li>在fork()之后，文件描述符没有被关闭，所以子进程可以读取到父进程发送的信号。</li>
+</ul>
+这个在主函数循环中执行poll(2)之类的单进程服务器(译注：原文为 signal-process server，作者本意是指这个服务器上跑的程序只会有一个进程)上会非常有用。它简化了处理信号的过程，因为信号描述符可以被加进poll的描述符数组中，也可以不被异步事件所影响、像其他描述符一样地被处理。当你准备好了的时候你再处理信号，因为程序是不会被中断的。<br />
+<br />
+<br />
+<span class="Apple-style-span" style="font-size: large;"><br /></span><div class="blogger-post-footer"><img width='1' height='1' src='https://blogger.googleusercontent.com/tracker/6372431252755588535-5964159289974478268?l=smilejustforfan.blogspot.com' alt='' /></div>
+<p><a href="http://feedads.g.doubleclick.net/~a/41N7U-7CdzGONPN5o_uThSoNIqo/0/da"><img src="http://feedads.g.doubleclick.net/~a/41N7U-7CdzGONPN5o_uThSoNIqo/0/di" border="0" ismap="true"></img></a><br/>
+<a href="http://feedads.g.doubleclick.net/~a/41N7U-7CdzGONPN5o_uThSoNIqo/1/da"><img src="http://feedads.g.doubleclick.net/~a/41N7U-7CdzGONPN5o_uThSoNIqo/1/di" border="0" ismap="true"></img></a></p><img src="http://feeds.feedburner.com/~r/RobbyLeesBolgsmilejustforfan/~4/7MtYXCGbOVg" height="1" width="1"/>

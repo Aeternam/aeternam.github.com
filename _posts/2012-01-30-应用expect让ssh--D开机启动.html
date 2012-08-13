@@ -1,0 +1,44 @@
+---           
+layout: post
+title: 应用expect让ssh -D开机启动
+date: 2012-01-30 09:25:00 UTC
+comments: false
+categories: Linux 日常技巧
+---
+
+<span style="font-size: large;">脚本</span>：<br />
+<br />
+<br />
+<pre style="background: #000000; color: #d1d1d1;"><span style="color: #9999a9;">#!/usr/bin/expect</span>
+
+
+<span style="color: #e66170; font-weight: bold;">set</span> timeout <span style="color: #008c00;">20</span>
+<span style="color: #9999a9;">#set command ssh</span>
+<span style="color: #e66170; font-weight: bold;">set</span> parameter1 <span style="color: #00c4c4;">"-qTfnN"</span>
+<span style="color: #e66170; font-weight: bold;">set</span> parameter2 <span style="color: #00c4c4;">"-D"</span>
+<span style="color: #e66170; font-weight: bold;">set</span> port <span style="color: #00c4c4;">"</span><span style="color: #008c00;">7070</span><span style="color: #00c4c4;">"</span>
+
+<span style="color: #e66170; font-weight: bold;">set</span> loginname <span style="color: #00c4c4;">"root"</span>
+<span style="color: #e66170; font-weight: bold;">set</span> password <span style="color: #00c4c4;">"</span><span style="color: #008c00;">123456</span><span style="color: #00c4c4;">"</span>
+<span style="color: #e66170; font-weight: bold;">set</span> url <span style="color: #00c4c4;">"www.yoursshaddr.net"</span>
+
+spawn ssh $parameter1 $parameter2 $port $loginname@$url
+expect <span style="color: #00c4c4;">"password:"</span>
+
+<span style="color: #e66170; font-weight: bold;">send</span> $password
+</pre>
+<br />
+<span style="font-size: large;">如有需要请自行将代码的第二段中的用户名、密码、主机地址等信息更改。</span><br />
+<span style="font-size: large;"><br /></span><br />
+<span style="font-size: large;">然后将该脚本加入到开机启动中，比如ubuntu中是这样</span><br />
+<br />
+<div class="separator" style="clear: both; text-align: center;">
+<a href="http://farm8.staticflickr.com/7010/6788263729_be69c52b51_d.jpg" imageanchor="1" style="margin-left: 1em; margin-right: 1em;"><img border="0" src="http://farm8.staticflickr.com/7010/6788263729_be69c52b51_d.jpg" /></a></div>
+<span style="font-size: large;">搞定，收工！</span><br />
+<span style="font-size: large;"><br /></span><br />
+<span style="font-size: large;">((EOF))</span><br />
+<br />
+<br />
+<br /><div class="blogger-post-footer"><img width='1' height='1' src='https://blogger.googleusercontent.com/tracker/6372431252755588535-5772286033266686450?l=smilejustforfan.blogspot.com' alt='' /></div>
+<p><a href="http://feedads.g.doubleclick.net/~a/bQ7zAiMDGA-DdZoHrbahIhKDh6Y/0/da"><img src="http://feedads.g.doubleclick.net/~a/bQ7zAiMDGA-DdZoHrbahIhKDh6Y/0/di" border="0" ismap="true"></img></a><br/>
+<a href="http://feedads.g.doubleclick.net/~a/bQ7zAiMDGA-DdZoHrbahIhKDh6Y/1/da"><img src="http://feedads.g.doubleclick.net/~a/bQ7zAiMDGA-DdZoHrbahIhKDh6Y/1/di" border="0" ismap="true"></img></a></p><img src="http://feeds.feedburner.com/~r/RobbyLeesBolgsmilejustforfan/~4/40eWJkxw244" height="1" width="1"/>

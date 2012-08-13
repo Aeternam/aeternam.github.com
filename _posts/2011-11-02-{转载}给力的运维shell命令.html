@@ -1,0 +1,108 @@
+---           
+layout: post
+title: {转载}给力的运维shell命令
+date: 2011-11-02 14:38:00 UTC
+comments: false
+categories: 运维 shell
+---
+
+<span class="Apple-style-span" style="background-color: white; font-family: arial,sans-serif; font-size: 13px;"></span><br />
+1.显示消耗内存/CPU最多的10个进程<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #c20cb9;">ps</span> aux <span style="color: black;">|</span> <span style="color: #c20cb9;">sort</span> <span style="color: #660033;">-nk</span> +<span style="color: black;">4</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">tail</span>
+<span style="color: #c20cb9;">ps</span> aux <span style="color: black;">|</span> <span style="color: #c20cb9;">sort</span> <span style="color: #660033;">-nk</span> +<span style="color: black;">3</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">tail</span></pre>
+</div>
+</div>
+2.查看Apache的并发请求数及其TCP连接状态<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #c20cb9;">netstat</span> <span style="color: #660033;">-n</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">awk</span> <span style="color: red;">'/^tcp/ {++S[$NF]} END {for(a in S) print a, S[a]}'</span></pre>
+</div>
+</div>
+3.找出自己最常用的10条命令及使用次数（或求访问最多的ip数）<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #c20cb9;">sed</span> <span style="color: #660033;">-e</span> <span style="color: red;">'s/| /\n/g'</span> ~<span style="color: black;">/</span>.bash_history <span style="color: black;">|</span><span style="color: #c20cb9;">cut</span> <span style="color: #660033;">-d</span>  <span style="color: red;">''</span> <span style="color: #660033;">-f</span> <span style="color: black;">1</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">sort</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">uniq</span> <span style="color: #660033;">-c</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">sort</span> <span style="color: #660033;">-nr</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">head</span></pre>
+</div>
+</div>
+4.日志中第10个字段表示连接时间，求平均连接时间<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #c20cb9;">cat</span> access_log <span style="color: black;">|</span><span style="color: #c20cb9;">grep</span> “connect cbp” <span style="color: black;">|</span><span style="color: #c20cb9;">awk</span> ‘BEGIN<span style="color: #7a0874;">{</span><span style="color: #007800;">sum</span>=<span style="color: black;">0</span>;<span style="color: #007800;">count</span>=<span style="color: black;">0</span>;<span style="color: #7a0874;">}</span><span style="color: #7a0874;">{</span><span style="color: #c20cb9;">sum</span>+=<span style="color: #007800;">$1</span><span style="color: black;">0</span>;count++;<span style="color: #7a0874;">}</span>END<span style="color: #7a0874;">{</span><span style="color: #7a0874;">printf</span><span style="color: #7a0874;">(</span>“<span style="color: #007800;">sum</span>=<span style="color: black;">%</span>d,<span style="color: #007800;">count</span>=<span style="color: black;">%</span>d,<span style="color: #007800;">avg</span>=<span style="color: black;">%</span>f\n”,<span style="color: #c20cb9;">sum</span>,count,
+sum<span style="color: black;">/</span>count<span style="color: #7a0874;">)</span><span style="color: #7a0874;">}</span>’</pre>
+</div>
+</div>
+5.lsof命令<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;">lsof abc.txt 显示开启文件abc.txt的进程
+lsof <span style="color: #660033;">-i</span> :<span style="color: black;">22</span> 知道<span style="color: black;">22</span>端口现在运行什么程序
+lsof <span style="color: #660033;">-c</span> abc 显示abc进程现在打开的文件
+lsof <span style="color: #660033;">-p</span> <span style="color: black;">12</span>  看进程号为<span style="color: black;">12</span>的进程打开了哪些文件</pre>
+</div>
+</div>
+6.杀掉一个程序的所有进程<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;">pkill <span style="color: #660033;">-9</span> httpd
+<span style="color: #c20cb9;">killall</span> <span style="color: #660033;">-9</span> httpd</pre>
+</div>
+</div>
+注意尽量不用-9，数据库服务器上更不能轻易用kill，否则造成重要数据丢失后果将不堪设想。<br />
+7.rsync命令（要求只同步某天的压缩文件，而且远程目录保持与本地目录一致）<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: black;">/</span>usr<span style="color: black;">/</span>bin<span style="color: black;">/</span>rsync <span style="color: #660033;">-azvR</span> –password-file=<span style="color: black;">/</span>etc<span style="color: black;">/</span>rsync.secrets <span style="color: black;">`</span><span style="color: #c20cb9;">find</span> . <span style="color: #660033;">-name</span> “<span style="color: black;">*</span><span style="color: #007800;">$yesterday</span>.gz”  <span style="color: #660033;">-type</span> f <span style="color: black;">`</span> storage<span style="color: black;">@</span>192.168.2.23::logbackup<span style="color: black;">/</span><span style="color: black;">13.21</span><span style="color: black;">/</span></pre>
+</div>
+</div>
+8.把目录下*.sh文件改名为*.SH<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #c20cb9;">find</span> .  <span style="color: #660033;">-name</span> <span style="color: red;">"*.sh"</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">sed</span>  <span style="color: red;">'s/\(.*\)\.sh/mv \0 \1.SH/'</span> <span style="color: black;">|</span><span style="color: #c20cb9;">sh</span>
+<span style="color: #c20cb9;">find</span> .  <span style="color: #660033;">-name</span> <span style="color: red;">"*.sh"</span> <span style="color: black;">|</span> <span style="color: #c20cb9;">sed</span>  <span style="color: red;">'s/\(.*\)\.sh/mv &amp; \1.SH/'</span><span style="color: black;">|</span><span style="color: #c20cb9;">sh</span>  （跟上面那个效果一样）</pre>
+</div>
+</div>
+9.ssh执行远程的程序，并在本地显示<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #c20cb9;">ssh</span> <span style="color: #660033;">-n</span> <span style="color: #660033;">-l</span> zouyunhao 192.168.2.14 <span style="color: red;">"ls -al /home/zouyunhao"</span></pre>
+</div>
+</div>
+10. 直接用命令行修改密码<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: #7a0874;">echo</span> <span style="color: red;">"zouyunhaoPassword"</span> <span style="color: black;">|</span><span style="color: #c20cb9;">passwd</span> –stdin zouyunhao
+&nbsp;
+<span style="color: #c20cb9;">ssh-keygen</span>
+ssh-copy-id <span style="color: #660033;">-i</span> ~<span style="color: black;">/</span>.ssh<span style="color: black;">/</span>id_rsa.pub user<span style="color: black;">@</span>remoteServer</pre>
+</div>
+</div>
+12.以http方式共享当前文件夹的文件<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;">$ python <span style="color: #660033;">-m</span> SimpleHTTPServer
+在浏览器访问http:<span style="color: black;">//</span>IP:<span style="color: black;">8000</span><span style="color: black;">/</span>即可下载当前目录的文件。</pre>
+</div>
+</div>
+13.shell段注释<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;">:<span style="color: black;">&lt;&lt;</span><span style="color: red;">'echo hello,world!'</span></pre>
+</div>
+</div>
+14.查看服务器序列号<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;">dmidecode <span style="color: black;">|</span><span style="color: #c20cb9;">grep</span> <span style="color: red;">"Serial Number"</span></pre>
+</div>
+</div>
+（查看机器其他硬件信息也可用这个命令）<br />
+15.查看网卡是否有网线物理连接<br />
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<div style="margin-bottom: 0px; margin-left: 0px; margin-right: 0px; margin-top: 0px;">
+<pre style="font-family: monospace; font-size: 12px;"><span style="color: black;">/</span>sbin<span style="color: black;">/</span>mii-tool</pre>
+</div>
+</div><div class="blogger-post-footer"><img width='1' height='1' src='https://blogger.googleusercontent.com/tracker/6372431252755588535-7922146732218212833?l=smilejustforfan.blogspot.com' alt='' /></div>
+<p><a href="http://feedads.g.doubleclick.net/~a/Q-7osMU26bq__uKnMHc6_jOmZYc/0/da"><img src="http://feedads.g.doubleclick.net/~a/Q-7osMU26bq__uKnMHc6_jOmZYc/0/di" border="0" ismap="true"></img></a><br/>
+<a href="http://feedads.g.doubleclick.net/~a/Q-7osMU26bq__uKnMHc6_jOmZYc/1/da"><img src="http://feedads.g.doubleclick.net/~a/Q-7osMU26bq__uKnMHc6_jOmZYc/1/di" border="0" ismap="true"></img></a></p><img src="http://feeds.feedburner.com/~r/RobbyLeesBolgsmilejustforfan/~4/b4CUnEW2w7Y" height="1" width="1"/>

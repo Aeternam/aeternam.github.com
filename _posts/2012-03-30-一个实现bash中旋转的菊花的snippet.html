@@ -1,0 +1,24 @@
+---           
+layout: post
+title: 一个实现bash中旋转的菊花的snippet
+date: 2012-03-30 02:53:00 UTC
+comments: true
+categories: 日常技巧 shell
+---
+
+shell脚本中某些需要等待的步骤我们通常的做法是输出一个旋转的线段,代码如下<br />
+<br />
+<br />
+<pre style="background: #000000; color: #d1d1d1;">i<span style="color: #d2cd86;">=</span><span style="color: #008c00;">1</span>
+sp<span style="color: #d2cd86;">=</span><span style="color: #00c4c4;">"</span><span style="color: #40015a;">/</span><span style="color: #00c4c4;">-</span><span style="color: teal;">\|</span><span style="color: #00c4c4;">"</span>
+<span style="color: #904050;">echo</span> <span style="color: #00dddd;">-n</span> <span style="color: #00c4c4;">' '</span>
+<span style="color: #e66170; font-weight: bold;">while</span> <span style="color: #00dddd;">true</span>
+<span style="color: #e66170; font-weight: bold;">do</span>
+    <span style="color: #904050;">printf</span> <span style="color: #00c4c4;">"</span><span style="color: teal;">\b</span><span style="color: #00c4c4;">${sp:i++%${#sp}:1}"</span>
+<span style="color: #e66170; font-weight: bold;">done</span>
+</pre>
+<br />
+这其中用到了退格符.<br />
+((EOF))<div class="blogger-post-footer"><img width='1' height='1' src='https://blogger.googleusercontent.com/tracker/6372431252755588535-5677227188116491702?l=smilejustforfan.blogspot.com' alt='' /></div>
+<p><a href="http://feedads.g.doubleclick.net/~a/TIeL1kGtGWqSHLpDnx0SC3jyXD4/0/da"><img src="http://feedads.g.doubleclick.net/~a/TIeL1kGtGWqSHLpDnx0SC3jyXD4/0/di" border="0" ismap="true"></img></a><br/>
+<a href="http://feedads.g.doubleclick.net/~a/TIeL1kGtGWqSHLpDnx0SC3jyXD4/1/da"><img src="http://feedads.g.doubleclick.net/~a/TIeL1kGtGWqSHLpDnx0SC3jyXD4/1/di" border="0" ismap="true"></img></a></p><img src="http://feeds.feedburner.com/~r/RobbyLeesBolgsmilejustforfan/~4/3w1K0-TyoPA" height="1" width="1"/>
