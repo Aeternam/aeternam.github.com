@@ -1,0 +1,23 @@
+---           
+layout: post
+title: {译文}关于Linux信号的一些（一）--关于信号
+date: 2011-10-10 21:30:00 UTC
+comments: false
+categories: 系统编程 翻译
+---
+
+<div>
+<br />
+译自：<a href="http://www.linuxprogrammingblog.com/all-about-linux-signals">http://www.linuxprogrammingblog.com/all-about-linux-signals</a><br />
+<br />
+<br /></div>
+在多数情况下，如果你想在你的程序里写一个简单的signal handler（注:国内的大部分译作将此翻译为信号处理函数），比如这样：<br />
+<blockquote class="tr_bq">
+<div style="text-align: center;">
+void handler (int sig)</div>
+</blockquote>
+然后,当有信号传递给这个进程的时候使用系统函数 <a href="http://www.kernel.org/doc/man-pages/online/pages/man2/signal.2.html">signal(2)</a>&nbsp;去执行它。这算是最简单的情况了，但是信号远比这样有趣多了！这篇文章所包含的内容是非常有帮助的，比如当你在写一个daemon的时候很可能需要恰当地处理对于你的程序产生的中断，使其免于对当前的操作或者整个程序的中断。<br />
+<br />
+((EOF))<div class="blogger-post-footer"><img width='1' height='1' src='https://blogger.googleusercontent.com/tracker/6372431252755588535-5591717951033009503?l=smilejustforfan.blogspot.com' alt='' /></div>
+<p><a href="http://feedads.g.doubleclick.net/~a/g2dtmU9woKimsZu84ttcA939iHE/0/da"><img src="http://feedads.g.doubleclick.net/~a/g2dtmU9woKimsZu84ttcA939iHE/0/di" border="0" ismap="true"></img></a><br/>
+<a href="http://feedads.g.doubleclick.net/~a/g2dtmU9woKimsZu84ttcA939iHE/1/da"><img src="http://feedads.g.doubleclick.net/~a/g2dtmU9woKimsZu84ttcA939iHE/1/di" border="0" ismap="true"></img></a></p><img src="http://feeds.feedburner.com/~r/RobbyLeesBolgsmilejustforfan/~4/3Tb4eLFtqFM" height="1" width="1"/>
